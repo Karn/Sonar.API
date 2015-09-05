@@ -111,7 +111,7 @@ module.exports = function (app) {
 			}
 		});
 	});
-	
+		
 	app.put('/api/users/:id/unfollow/:other_id', function (req, res) {
 		
 		var conditions = { id: req.params.id };
@@ -154,6 +154,60 @@ module.exports = function (app) {
 						res.send({ meta: { status: 200, message: 'OK' }, response: {} });
 					});
 				}
+			}
+		});
+	});
+	
+	app.get('/api/users/:id/following', function (req, res) {
+		
+		var conditions = { id: req.params.id };
+		
+		User.find(conditions, function (err, user) {
+			if (err) {
+				console.log(err);
+				res.send({ meta: { status: 500, message: 'Internal Server Error' }, response: { artist: [] } });
+			} else {
+				var artist_list = [];
+				
+				for (index = 0; index < user.following.length; ++index) {
+					User.find({ id: user.following[index] }, function (error, user2) {
+						if (err) {
+							console.log(err);
+							res.send({ meta: { status: 500, message: 'Internal Server Error' }, response: { artist: [] } });
+						}
+						
+						artist_list.push(user2);
+					});
+				}
+				
+				res.send({ meta: { status: 200, message: 'OK' }, response: { artists: artist_list } });
+			}
+		});
+	});
+	
+	app.get('/api/users/:id/followers', function (req, res) {
+		
+		var conditions = { id: req.params.id };
+		
+		User.find(conditions, function (err, user) {
+			if (err) {
+				console.log(err);
+				res.send({ meta: { status: 500, message: 'Internal Server Error' }, response: { artist: [] } });
+			} else {
+				var artist_list = [];
+				
+				for (index = 0; index < user.followers.length; ++index) {
+					User.find({ id: user.followers[index] }, function (error, user2) {
+						if (err) {
+							console.log(err);
+							res.send({ meta: { status: 500, message: 'Internal Server Error' }, response: { artist: [] } });
+						}
+						
+						artist_list.push(user2);
+					});
+				}
+				
+				res.send({ meta: { status: 200, message: 'OK' }, response: { artists: artist_list } });
 			}
 		});
 	});
