@@ -3,15 +3,19 @@ var mongoose = require('mongoose'); // import the model
 
 // define the schema
 var userSchema = new mongoose.Schema({
-	id: { type: String, required: true },
-	name: { type: String, required: true },
-	description: { type: String }, 
-	location: { type: String, required: true },
-	following: { type: Array, required: true, "default": [] },
-	followers: { type: Array, required: true, "default": [] },
-	track_count: { type: Number, required: true, "default": 0 },
-	starred_artists: { type: Array, required: true, "default": [] },
-	liked_tracks: { type: Array, required: true, "default": [] }
+    id: { type: String, required: true },
+    name: { type: String, required: true },
+    description: { type: String }, 
+    push_token: { type: String },
+    device_type: { type: String },
+    city: { type: String, required: true },
+    state: { type: String, required: true },
+    country: { type: String, required: true },
+    following: { type: Array, "default": [] },
+    followers: { type: Array, "default": [] },
+    track_count: { type: Number, "default": 0 },
+    starred_artists: { type: Array, "default": [] },
+    liked_tracks: { type: Array, "default": [] }
 });
 
 // compile schema into a model

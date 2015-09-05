@@ -5,7 +5,7 @@ var mongoose = require('mongoose'); // import the model
 var trackSchema = new mongoose.Schema({
 	id: { type: String, required: true },
 	name: { type: String, required: true },
-	likes: { type: Number, required: true, "default": 0 },
+	likes: { type: Number, "default": 0 },
 	description: { type: String },
 	city: { type: String, required: true },
 	state: { type: String, required: true },

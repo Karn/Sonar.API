@@ -1,6 +1,15 @@
 ﻿var User = require('./data/userSchema'); // import the model
 var Track = require('./data/trackSchema'); // import the model
 
+var azure = require('azure');
+var multiparty = require('multiparty');
+
+var accessKey = 'OQyP8P4TinFFqcKtKuFzaJqEoAxiL/ppgRd3V4MH5vP6sF81lni0aapPJ7FrxtPaSFoueHwMHdbmd+Irx1x3zg==';
+var storageAccount = 'sonarapp';
+var containerName = 'audio-store';
+
+var blobService = azure.createBlobService(storageAccount, accessKey);
+
 module.exports = function (app) {
     
     app.all('/api/*', function (req, res, next) {
@@ -9,7 +18,8 @@ module.exports = function (app) {
     });
     
     app.use(function (req, res) {
-        res.status(404);
+        res.status(400);
+        res.send({ error: 'Bad request' });
     });
     
     app.get('/api/users', function (req, res) {
@@ -20,7 +30,8 @@ module.exports = function (app) {
             console.log(users.length);
             if (err) {
                 console.log(err);
-                res.status(500)
+                res.status(500);
+                res.send({});
             }
             
             res.send(users)
@@ -32,15 +43,39 @@ module.exports = function (app) {
         _user.id = req.body.id;
         _user.name = req.body.name;
         _user.description = req.body.description;
-        _user.location = req.body.location;
+        _user.city = req.body.city;
+        _user.state = req.body.state;
+        _user.country = req.body.country;
+        
+        User.create(_user, function (err) {
+            if (err) {
+                console.log(err);
+                res.status(500);
+                res.send({});
+            }
+            
+            res.status(201);
+            res.send({});
+        });
+    });
+    
+    app.get('/api/users/add', function (req, res) {
+        console.log('get');
+        var _user = new User();
+        _user.id = req.query.id;
+        _user.name = req.query.name;
+        _user.description = req.query.description;
+        _user.location = req.query.location;
         
         User.create(_user, function (err) {
             if (err) {
                 console.log(err);
                 res.satus(500);
+                res.send({});
             }
             
             res.status(201);
+            res.send({});
         });
     });
     
@@ -363,19 +398,76 @@ module.exports = function (app) {
         });
     });
     
-    app.post('/api/tracks', function (req, res) {
+    //upload a file to azure blob storage
+    app.get('/api/tracks/upload', function (req, res) {
+        res.contentType('html');
+        res.send(
+            '<form action="/api/tracks/upload" method="post" enctype="multipart/form-data">' +
+    '<input type="file" name="snapshot" />' +
+    '<input type="submit" value="Upload" />' +
+    '</form>'
+        );
+    });
+    
+    
+    app.post('/api/tracks/upload', function (req, res) {
+        var form = new multiparty.Form();
         
+        form.on('part', function (part) {
+            if (part.filename) {
+                
+                var size = part.byteCount - part.byteOffset;
+                var name = part.filename;
+                
+                blobService.createBlockBlobFromStream(containerName, name, part, size, function (error) {
+                    if (error) {
+                        res.send(' Blob create: error ');
+                    }
+                });
+            } else {
+                form.handlePart(part);
+            }
+        });
+        form.parse(req);
+        res.send('OK');
+
+        
+        
+        //var _track = new Track();
+        //_track.id = req.body.id;
+        //_track.name = req.body.name;
+        //_track.description = req.body.description;
+        //_track.city = req.body.city;
+        //_track.state = req.body.state;
+        //_track.country = req.body.country;
+        //_track.source = 'j';
+        
+        //Track.create(_track, function (err) {
+        //    if (err) {
+        //        console.log(err);
+        //        res.status(500);
+        //        res.send({});
+        //    }
+            
+        //    res.status(201);
+        //    res.send({});
+        //});
+    });
+    
+    app.get('/api/track/add', function (req, res) {
         var _track = new Track();
-        _track.id = req.body.id;
-        _track.name = req.body.name;
-        _track.description = req.body.description;
-        _track.source = 'j';
+        _track.id = req.query.id;
+        _track.name = req.query.name;
+        _track.city = req.query.city;
+        _track.state = req.query.state;
+        _track.country = req.query.country;
+        _track.source = req.query.source;
         
         Track.create(_track, function (err) {
             if (err) {
                 console.log(err);
-                res.status(500);
-                res.send({});
+                res.satus(500);
+                res.send({ error: 'Internal server error' });
             }
             
             res.status(201);
@@ -398,13 +490,13 @@ module.exports = function (app) {
                 res.send(tracks);
             } else {
                 res.status(404);
-                res.send({});
+                res.send({ error: 'Not Found' });
             }
         });
     });
     
     app.get('/api/feed/new', function (req, res, next) {
-        var conditions = { city: req.query.city, state: req.query.state }; // we can use this object to supply search params ....
+        var conditions = { city: req.query.city, state: req.query.state, country: req.query.country }; // we can use this object to supply search params ....
         Track.find(conditions, function (err, tracks) {
             
             if (err) {
@@ -413,13 +505,14 @@ module.exports = function (app) {
                 res.send({});
             }
             
+            console.log(tracks)
             res.send(sortByKey(tracks, "uploaded"));
         });
     });
     
-
+    
     app.get('/api/feed/hot', function (req, res, next) {
-        var conditions = { city: req.query.city, state: req.query.state }; // we can use this object to supply search params ....
+        var conditions = { city: req.query.city, state: req.query.state, country: req.query.country }; // we can use this object to supply search params ....
         Track.find(conditions, function (err, tracks) {
             
             if (err) {
@@ -432,10 +525,54 @@ module.exports = function (app) {
         });
     });
     
+    app.get('/api/search', function (req, res, next) {
+        var conditions = { name: { $regex : req.query.tag } };
+        
+        if (req.query.filter == 'users') {
+            
+            User.find(conditions, function (err, user) {
+                if (err) {
+                    console.log(err);
+                    res.status(500);
+                    res.send({});
+                } else {
+                    res.send(user.liked_tracks);
+                }
+            });
+        } else {
+            Track.find(conditions, function (err, tracks) {
+                
+                if (err) {
+                    console.log(err);
+                    res.status(500);
+                    res.send({});
+                }
+                
+                res.send(sortByKey(tracks, "likes"));
+            });
+        }
+    });
+    
     function sortByKey(array, key) {
         return array.sort(function (a, b) {
             var x = a[key]; var y = b[key];
             return ((x > y) ? -1 : ((x < y) ? 1 : 0));
         });
     }
+    
+    ///Ask how to send to specific user.
+    //function sendPushNotification(content) {
+    //    var payload = {
+    //        data: {
+    //            message: content
+    //        }
+    //    };
+        
+    //    notificationHubService.gcm.send(null, payload, function (error) {
+    //        if (!error) {
+    //            //notification sent
+    //            console.log('sent');
+    //        }
+    //    });
+    //}
 };
