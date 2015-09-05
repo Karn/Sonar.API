@@ -53,6 +53,7 @@ module.exports = function (app) {
             if (err) {
                 console.log(err);
                 res.status(500);
+                res.send({});
             }
             
             console.log(user);
@@ -60,6 +61,7 @@ module.exports = function (app) {
                 res.send(user);
             } else {
                 res.status(404);
+                res.send({});
             }
         });
 
@@ -73,6 +75,7 @@ module.exports = function (app) {
             
             if (user === null || user === undefined) {
                 res.status(404);
+                res.send({});
             } else {
                 var j = user.following.indexOf(req.params.other_id);
                 if (j != -1) {
@@ -81,6 +84,7 @@ module.exports = function (app) {
                     User.find({ id: req.params.other_id }).exec(function (err, other_user) {
                         if (user === null || user === undefined) {
                             res.status(404);
+                            res.send({});
                         } else {
                             var i = other_user.followers.indexOf(user.id);
                             if (i != -1) {
@@ -92,6 +96,7 @@ module.exports = function (app) {
                             if (err) {
                                 console.log(err);
                                 res.status(500);
+                                res.send({});
                             }
                         });
                     });
@@ -100,9 +105,11 @@ module.exports = function (app) {
                         if (err) {
                             console.log(err);
                             res.status(500);
+                            res.send({});
                         }
                         
                         res.status(200);
+                        res.send({});
                     });
                 }
             }
@@ -117,6 +124,7 @@ module.exports = function (app) {
             
             if (user === null || user === undefined) {
                 res.status(404);
+                res.send({});
             } else {
                 var j = user.following.indexOf(req.params.other_id);
                 if (j != -1) {
@@ -125,6 +133,7 @@ module.exports = function (app) {
                     User.find({ id: req.params.other_id }).exec(function (err, other_user) {
                         if (user === null || user === undefined) {
                             res.status(404);
+                            res.send({});
                         } else {
                             var i = other_user.followers.indexOf(user.id);
                             if (i != -1) {
@@ -136,6 +145,7 @@ module.exports = function (app) {
                             if (err) {
                                 console.log(err);
                                 res.status(500);
+                                res.send({});
                             }
                         });
                     });
@@ -144,9 +154,127 @@ module.exports = function (app) {
                         if (err) {
                             console.log(err);
                             res.status(500);
+                            res.send({});
                         }
                         
                         res.status(200);
+                        res.send({});
+                    });
+                }
+            }
+        });
+    });
+    
+    app.put('/api/users/:id/star/:other_id', function (req, res) {
+        
+        var conditions = { id: req.params.id };
+        
+        User.find(conditions).exec(function (err, user) {
+            
+            if (user === null || user === undefined) {
+                res.status(404);
+                res.send({});
+            } else {
+                var j = user.starred_artists.indexOf(req.params.other_id);
+                if (j != -1) {
+                    user.starred_artists.push(user.id);
+                    
+                    user.save(function (err) {
+                        if (err) {
+                            console.log(err);
+                            res.status(500);
+                            res.send({});
+                        }
+                        
+                        res.status(200);
+                        res.send({});
+                    });
+                }
+            }
+        });
+    });
+    
+    app.put('/api/users/:id/unstar/:other_id', function (req, res) {
+        
+        var conditions = { id: req.params.id };
+        
+        User.find(conditions).exec(function (err, user) {
+            
+            if (user === null || user === undefined) {
+                res.status(404);
+                res.send({});
+            } else {
+                var j = user.starred_artists.indexOf(req.params.other_id);
+                if (j != -1) {
+                    user.starred_artists.splice(j, 1);
+                    
+                    user.save(function (err) {
+                        if (err) {
+                            console.log(err);
+                            res.status(500);
+                            res.send({});
+                        }
+                        
+                        res.status(200);
+                        res.send({});
+                    });
+                }
+            }
+        });
+    });
+    
+    app.put('/api/users/:id/like', function (req, res) {
+        
+        var conditions = { id: req.params.id };
+        
+        User.find(conditions).exec(function (err, user) {
+            
+            if (user === null || user === undefined) {
+                res.status(404);
+                res.send({});
+            } else {
+                var j = user.liked_tracks.indexOf(req.query.track_id);
+                if (j != -1) {
+                    user.liked_tracks.push(req.query.track_id);
+                    
+                    user.save(function (err) {
+                        if (err) {
+                            console.log(err);
+                            res.status(500);
+                            res.send({});
+                        }
+                        
+                        res.status(200);
+                        res.send({});
+                    });
+                }
+            }
+        });
+    });
+    
+    app.put('/api/users/:id/unlike', function (req, res) {
+        
+        var conditions = { id: req.params.id };
+        
+        User.find(conditions).exec(function (err, user) {
+            
+            if (user === null || user === undefined) {
+                res.status(404);
+                res.send({});
+            } else {
+                var j = user.liked_tracks.indexOf(req.query.track_id);
+                if (j != -1) {
+                    user.liked_tracks.splice(j, 1);
+                    
+                    user.save(function (err) {
+                        if (err) {
+                            console.log(err);
+                            res.status(500);
+                            res.send({});
+                        }
+                        
+                        res.status(200);
+                        res.send({});
                     });
                 }
             }
@@ -161,6 +289,7 @@ module.exports = function (app) {
             if (err) {
                 console.log(err);
                 res.status(500);
+                res.send({});
             } else {
                 res.send(user.following);
             }
@@ -175,8 +304,39 @@ module.exports = function (app) {
             if (err) {
                 console.log(err);
                 res.status(500);
+                res.send({});
             } else {
                 res.send(user.followers);
+            }
+        });
+    });
+    
+    app.get('/api/users/:id/starred_artists', function (req, res) {
+        
+        var conditions = { id: req.params.id };
+        
+        User.find(conditions, function (err, user) {
+            if (err) {
+                console.log(err);
+                res.status(500);
+                res.send({});
+            } else {
+                res.send(user.starred_artists);
+            }
+        });
+    });
+    
+    app.get('/api/users/:id/liked_tracks', function (req, res) {
+        
+        var conditions = { id: req.params.id };
+        
+        User.find(conditions, function (err, user) {
+            if (err) {
+                console.log(err);
+                res.status(500);
+                res.send({});
+            } else {
+                res.send(user.liked_tracks);
             }
         });
     });
@@ -190,6 +350,7 @@ module.exports = function (app) {
             if (err) {
                 console.log(err);
                 res.status(500);
+                res.send({});
             }
             
             console.log(tracks);
@@ -197,6 +358,7 @@ module.exports = function (app) {
                 res.send(tracks);
             } else {
                 res.status(404);
+                res.send({});
             }
         });
     });
@@ -213,9 +375,11 @@ module.exports = function (app) {
             if (err) {
                 console.log(err);
                 res.status(500);
+                res.send({});
             }
             
             res.status(201);
+            res.send({});
         });
     });
     
@@ -227,62 +391,41 @@ module.exports = function (app) {
             if (err) {
                 console.log(err);
                 res.status(500);
+                res.send({});
             }
             
             if (tracks != null && tracks != []) {
                 res.send(tracks);
             } else {
                 res.status(404);
+                res.send({});
             }
         });
     });
     
-    app.get('/api/feed/new/city/:city', function (req, res, next) {
-        var conditions = { city: req.params.city }; // we can use this object to supply search params ....
+    app.get('/api/feed/new', function (req, res, next) {
+        var conditions = { city: req.query.city, state: req.query.state }; // we can use this object to supply search params ....
         Track.find(conditions, function (err, tracks) {
             
             if (err) {
                 console.log(err);
                 res.status(500);
-            }
-            
-            res.send(sortByKey(tracks, "uploaded"));
-        });
-    });
-    
-    app.get('/api/feed/new/state/:state', function (req, res, next) {
-        var conditions = { state: req.params.state }; // we can use this object to supply search params ....
-        Track.find(conditions, function (err, tracks) {
-            
-            if (err) {
-                console.log(err);
-                res.status(500);
+                res.send({});
             }
             
             res.send(sortByKey(tracks, "uploaded"));
         });
     });
     
-    app.get('/api/feed/hot/city/:city', function (req, res, next) {
-        var conditions = { city: req.params.city }; // we can use this object to supply search params ....
+
+    app.get('/api/feed/hot', function (req, res, next) {
+        var conditions = { city: req.query.city, state: req.query.state }; // we can use this object to supply search params ....
         Track.find(conditions, function (err, tracks) {
             
             if (err) {
                 console.log(err);
                 res.status(500);
-            }
-            
-            res.send(sortByKey(tracks, "likes"));
-        });
-    });
-    
-    app.get('/api/feed/hot/state/:state', function (req, res, next) {
-        var conditions = { state: req.params.state }; // we can use this object to supply search params ....
-        Track.find(conditions, function (err, tracks) {
-            
-            if (err) {
-                console.log(err);
-                res.status(500);
+                res.send({});
             }
             
             res.send(sortByKey(tracks, "likes"));
