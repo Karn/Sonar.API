@@ -10,9 +10,8 @@ module.exports = function (app) {
 	
 	app.use(function (req, res) {
 		res.status(404);
-		res.json({ meta: { status: 404, message: 'Not found' }, response: {} });
+		res.json({ meta: { status: 400, message: 'Bad Request' }, response: {} });
 	});
-	
 	
 	app.get('/api/users', function (req, res) {
 		
@@ -28,43 +27,7 @@ module.exports = function (app) {
 			res.send({ meta: { status: 200, message: 'OK' }, response: { artist: users } });
 		});
 	});
-	
-	app.get('/api/adduser', function (req, res) {
 		
-		var _user = new User();
-		_user.id = 1267;
-		_user.name = 'test';
-		_user.description = 'j';
-		_user.location = 'j';
-		
-		User.create(_user, function (err) {
-			if (err) {
-				console.log(err);
-				res.send({ meta: { status: 500, message: 'Internal Server Error' }, response: {} });
-			}
-			
-			res.json({ meta: { status: 201, message: 'Created' }, response: { id: _user.id } });
-		});
-	});
-	
-	app.post('/api/tracks', function (req, res) {
-		
-		var _track = new Track();
-		_track.id = req.body.id;
-		_track.name = req.body.name;
-		_track.description = req.body.description;
-		_track.source = 'j';
-		
-		Track.create(_track, function (err) {
-			if (err) {
-				console.log(err);
-				res.send({ meta: { status: 500, message: 'Internal Server Error' }, response: {} });
-			}
-			
-			res.json({ meta: { status: 201, message: 'Created' }, response: { id: _track.id } });
-		});
-	});
-	
 	app.post('/api/users', function (req, res) {
 		var _user = new User();
 		_user.id = req.body.id;
@@ -142,6 +105,25 @@ module.exports = function (app) {
 			}
 		});
 	});
+	
+	app.post('/api/tracks', function (req, res) {
+		
+		var _track = new Track();
+		_track.id = req.body.id;
+		_track.name = req.body.name;
+		_track.description = req.body.description;
+		_track.source = 'j';
+		
+		Track.create(_track, function (err) {
+			if (err) {
+				console.log(err);
+				res.send({ meta: { status: 500, message: 'Internal Server Error' }, response: {} });
+			}
+			
+			res.json({ meta: { status: 201, message: 'Created' }, response: { id: _track.id } });
+		});
+	});
+	
 	
 	app.get('/api/feed/local', function (req, res, next) {
 		
