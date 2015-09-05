@@ -66,6 +66,60 @@ module.exports = function (app) {
 
 	});
 	
+	app.put('/api/users/:id/follow/:other_id', function (req, res) {
+		
+		var conditions = { id: req.params.id };
+		
+		User.find(conditions).exec(function (err, user) { 
+		
+			if (user === null || user === undefined) {
+				res.send({ meta: { status: 404, message: 'Not found' }, response: {} })
+			} else {
+				if (user.following.indexOf(req.req.other_id) > 1) {
+					res.send({ meta: { status: 200, message: 'OK' }, response: {} });
+				} else {
+					user.following.push(other_id);
+					user.following_count = user.following_count + 1;
+					user.save(function (err) {
+						if (err) {
+							console.log(err);
+							res.send({ meta: { status: 500, message: 'Internal Server Error' }, response: { artist: [] } });
+						}
+
+						res.send({ meta: { status: 200, message: 'OK' }, response: {} });
+					});
+				}
+			}
+		});
+	});
+	
+	app.put('/api/users/:id/unfollow/:other_id', function (req, res) {
+		
+		var conditions = { id: req.params.id };
+		
+		User.find(conditions).exec(function (err, user) {
+			
+			if (user === null || user === undefined) {
+				res.send({ meta: { status: 404, message: 'Not found' }, response: {} })
+			} else {
+				if (user.following.indexOf(req.req.other_id) < 1) {
+					res.send({ meta: { status: 200, message: 'OK' }, response: {} });
+				} else {
+					user.following.push(other_id);
+					user.following_count = user.following_count - 1;
+					user.save(function (err) {
+						if (err) {
+							console.log(err);
+							res.send({ meta: { status: 500, message: 'Internal Server Error' }, response: { artist: [] } });
+						}
+						
+						res.send({ meta: { status: 200, message: 'OK' }, response: {} });
+					});
+				}
+			}
+		});
+	});
+	
 	app.get('/api/users/:id/tracks', function (req, res, next) {
 		
 		var conditions = { id: req.params.id };
@@ -124,17 +178,50 @@ module.exports = function (app) {
 		});
 	});
 	
-	
-	app.get('/api/feed/local', function (req, res, next) {
-		
+	app.get('/api/feed/new/city/:city', function (req, res, next) {
+		var conditions = { city: req.params.city }; // we can use this object to supply search params ....
+		Track.find(conditions, function (err, tracks) {
+			
+			if (err) {
+				console.log(err);
+				res.send({ meta: { status: 500, message: 'Internal Server Error' }, response: { track: [] } });
+			}
+			
+			console.log(tracks);
+			res.send({ meta: { status: 200, message: 'OK' }, response: { track: sortByKey(tracks, "uploaded") } });
+		});
 	});
 	
-	app.get('/api/feed/region', function (req, res, next) {
+	app.get('/api/feed/new/state/:state', function (req, res, next) {
+		var conditions = { state: req.params.state }; // we can use this object to supply search params ....
+		Track.find(conditions, function (err, tracks) {
+			
+			if (err) {
+				console.log(err);
+				res.send({ meta: { status: 500, message: 'Internal Server Error' }, response: { track: [] } });
+			}
+			
+			console.log(tracks);
+			res.send({ meta: { status: 200, message: 'OK' }, response: { track: sortByKey(tracks, "uploaded") } });
+		});
+	});
 		
+	app.get('/api/feed/hot/city/:city', function (req, res, next) {
+		var conditions = { city: req.params.city }; // we can use this object to supply search params ....
+		Track.find(conditions, function (err, tracks) {
+			
+			if (err) {
+				console.log(err);
+				res.send({ meta: { status: 500, message: 'Internal Server Error' }, response: { track: [] } });
+			}
+			
+			console.log(tracks);
+			res.send({ meta: { status: 200, message: 'OK' }, response: { track: sortByKey(tracks, "likes") } });
+		});
 	});
 	
-	app.get('/api/feed/top', function (req, res, next) {
-		var conditions = {}; // we can use this object to supply search params ....
+	app.get('/api/feed/hot/state/:state', function (req, res, next) {
+		var conditions = { state: req.params.state }; // we can use this object to supply search params ....
 		Track.find(conditions, function (err, tracks) {
 			
 			if (err) {
