@@ -70,22 +70,41 @@ module.exports = function (app) {
 		
 		var conditions = { id: req.params.id };
 		
-		User.find(conditions).exec(function (err, user) { 
-		
+		User.find(conditions).exec(function (err, user) {
+			
 			if (user === null || user === undefined) {
 				res.send({ meta: { status: 404, message: 'Not found' }, response: {} })
 			} else {
-				if (user.following.indexOf(req.req.other_id) > 1) {
-					res.send({ meta: { status: 200, message: 'OK' }, response: {} });
-				} else {
-					user.following.push(other_id);
+				var j = user.following.indexOf(req.params.other_id);
+				if (j != -1) {
+					user.following.push(user.id);
 					user.following_count = user.following_count + 1;
+					
+					User.find({ id: req.params.other_id }).exec(function (err, other_user) {
+						if (user === null || user === undefined) {
+							res.send({ meta: { status: 404, message: 'Not found' }, response: {} })
+						} else {
+							var i = other_user.followers.indexOf(user.id);
+							if (i != -1) {
+								other_user.followers.push(user.id);
+								other_user.followers_count = other_user.followers_count + 1;
+							}
+						}
+						
+						other_user.save(function (err) {
+							if (err) {
+								console.log(err);
+								res.send({ meta: { status: 500, message: 'Internal Server Error' }, response: { artist: [] } });
+							}
+						});
+					});
+					
 					user.save(function (err) {
 						if (err) {
 							console.log(err);
 							res.send({ meta: { status: 500, message: 'Internal Server Error' }, response: { artist: [] } });
 						}
-
+						
 						res.send({ meta: { status: 200, message: 'OK' }, response: {} });
 					});
 				}
@@ -102,11 +121,30 @@ module.exports = function (app) {
 			if (user === null || user === undefined) {
 				res.send({ meta: { status: 404, message: 'Not found' }, response: {} })
 			} else {
-				if (user.following.indexOf(req.req.other_id) < 1) {
-					res.send({ meta: { status: 200, message: 'OK' }, response: {} });
-				} else {
-					user.following.push(other_id);
+				var j = user.following.indexOf(req.params.other_id);
+				if (j != -1) {
+					user.following.splice(j, 1);
 					user.following_count = user.following_count - 1;
+
+					User.find({ id: req.params.other_id }).exec(function (err, other_user) {
+						if (user === null || user === undefined) {
+							res.send({ meta: { status: 404, message: 'Not found' }, response: {} })
+						} else {
+							var i = other_user.followers.indexOf(user.id);
+							if (i != -1) {
+								other_user.followers.splice(i, 1);
+								other_user.followers_count = other_user.followers_count - 1;
+							}
+						}
+
+						other_user.save(function (err) {
+							if (err) {
+								console.log(err);
+								res.send({ meta: { status: 500, message: 'Internal Server Error' }, response: { artist: [] } });
+							}
+						});
+					});
+
 					user.save(function (err) {
 						if (err) {
 							console.log(err);
