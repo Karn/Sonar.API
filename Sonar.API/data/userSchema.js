@@ -6,8 +6,6 @@ var userSchema = new mongoose.Schema({
     id: { type: String, required: true },
     name: { type: String, required: true },
     description: { type: String }, 
-    push_token: { type: String },
-    device_type: { type: String },
     following: { type: Array, "default": [] },
     followers: { type: Array, "default": [] },
     track_count: { type: Number, "default": 0 },

@@ -456,7 +456,7 @@ module.exports = function (app) {
         });
     });
     
-    app.post('/api/tracks/add', function (req, res) {
+    app.get('/api/tracks/add', function (req, res) {
       
         var _track = new Track();
         _track.id = req.query.id;
