@@ -38,11 +38,9 @@
     <Compile Include="data\userSchema.js" />
     <Compile Include="routes.js" />
     <Compile Include="server.js" />
-    <Compile Include="validation-rules.js" />
     <Content Include="apiapp.json" />
     <Content Include="Metadata\deploymentTemplates\apiappconfig.azureresource.json" />
     <None Include="SonarApp%28sonarresources%29.pubxml" />
-    <Content Include="test.txt" />
     <Content Include="Web.config" />
     <Content Include="Web.Debug.config" />
     <Content Include="bin\ChangeConfig.ps1" />
@@ -50,7 +48,6 @@
     <Content Include="bin\setup_web.cmd" />
     <Content Include="bin\node.cmd" />
     <Content Include="package.json" />
-    <Content Include="README.md" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="bin\" />

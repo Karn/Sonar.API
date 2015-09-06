@@ -1,15 +1,6 @@
 ﻿var User = require('./data/userSchema'); // import the model
 var Track = require('./data/trackSchema'); // import the model
 
-var azure = require('azure');
-var multiparty = require('multiparty');
-
-var accessKey = 'OQyP8P4TinFFqcKtKuFzaJqEoAxiL/ppgRd3V4MH5vP6sF81lni0aapPJ7FrxtPaSFoueHwMHdbmd+Irx1x3zg==';
-var storageAccount = 'sonarapp';
-var containerName = 'audio-store';
-
-var blobService = azure.createBlobService(storageAccount, accessKey);
-
 module.exports = function (app) {
     
     app.all('/api/*', function (req, res, next) {
@@ -59,31 +50,11 @@ module.exports = function (app) {
         });
     });
     
-    app.get('/api/users/add', function (req, res) {
-        console.log('get');
-        var _user = new User();
-        _user.id = req.query.id;
-        _user.name = req.query.name;
-        _user.description = req.query.description;
-        _user.location = req.query.location;
-        
-        User.create(_user, function (err) {
-            if (err) {
-                console.log(err);
-                res.satus(500);
-                res.send({});
-            }
-            
-            res.status(201);
-            res.send({});
-        });
-    });
-    
     app.get('/api/users/:id', function (req, res, next) {
         
         var conditions = { id: req.params.id };
         
-        User.find(conditions, function (err, user) {
+        User.findOne(conditions, function (err, user) {
             
             if (err) {
                 console.log(err);
@@ -102,17 +73,22 @@ module.exports = function (app) {
 
     });
     
-    app.put('/api/users/:id/follow/:other_id', function (req, res) {
+    app.get('/api/users/:id/follow/:other_id', function (req, res) {
         
         var conditions = { id: req.params.id };
         
         User.find(conditions).exec(function (err, user) {
             
-            if (user === null || user === undefined) {
+            if (user == null || user == undefined) {
                 res.status(404);
                 res.send({});
             } else {
-                var j = user.following.indexOf(req.params.other_id);
+                var j = 0;
+                if (user.following == []) {
+                    user.following.push(req.params.other_id);
+                } else {
+                    j = user.following.indexOf(req.params.other_id);
+                }
                 if (j != -1) {
                     user.following.push(user.id);
                     
@@ -151,7 +127,7 @@ module.exports = function (app) {
         });
     });
     
-    app.put('/api/users/:id/unfollow/:other_id', function (req, res) {
+    app.get('/api/users/:id/unfollow/:other_id', function (req, res) {
         
         var conditions = { id: req.params.id };
         
@@ -411,17 +387,28 @@ module.exports = function (app) {
     
     
     app.post('/api/tracks/upload', function (req, res) {
+        var file_name = "";
+        
+        var azure = require('azure-storage');
+        var multiparty = require('multiparty');
+        
+        var accessKey = 'OQyP8P4TinFFqcKtKuFzaJqEoAxiL/ppgRd3V4MH5vP6sF81lni0aapPJ7FrxtPaSFoueHwMHdbmd+Irx1x3zg==';
+        var storageAccount = 'sonarapp';
+        var containerName = 'audio-store';
+        
+        var blobService = azure.createBlobService(storageAccount, accessKey);
+
         var form = new multiparty.Form();
         
         form.on('part', function (part) {
             if (part.filename) {
                 
                 var size = part.byteCount - part.byteOffset;
-                var name = part.filename;
+                file_name = part.filename;
                 
-                blobService.createBlockBlobFromStream(containerName, name, part, size, function (error) {
+                blobService.createBlockBlobFromStream(containerName, file_name, part, size, function (error) {
                     if (error) {
-                        res.send(' Blob create: error ');
+                        res.send({ error: 'Unable to upload media' });
                     }
                 });
             } else {
@@ -429,29 +416,26 @@ module.exports = function (app) {
             }
         });
         form.parse(req);
-        res.send('OK');
-
         
+        var _track = new Track();
+        _track.id = req.body.id;
+        _track.name = req.body.name;
+        _track.description = req.body.description;
+        _track.city = req.body.city;
+        _track.state = req.body.state;
+        _track.country = req.body.country;
+        _track.source = 'https://sonarapp.blob.core.windows.net/audio-store/' + file_name;
         
-        //var _track = new Track();
-        //_track.id = req.body.id;
-        //_track.name = req.body.name;
-        //_track.description = req.body.description;
-        //_track.city = req.body.city;
-        //_track.state = req.body.state;
-        //_track.country = req.body.country;
-        //_track.source = 'j';
-        
-        //Track.create(_track, function (err) {
-        //    if (err) {
-        //        console.log(err);
-        //        res.status(500);
-        //        res.send({});
-        //    }
+        Track.create(_track, function (err) {
+            if (err) {
+                console.log(err);
+                res.status(500);
+                res.send({});
+            }
             
-        //    res.status(201);
-        //    res.send({});
-        //});
+            res.status(201);
+            res.send({});
+        });
     });
     
     app.get('/api/track/add', function (req, res) {
@@ -559,20 +543,20 @@ module.exports = function (app) {
             return ((x > y) ? -1 : ((x < y) ? 1 : 0));
         });
     }
-    
-    ///Ask how to send to specific user.
-    //function sendPushNotification(content) {
-    //    var payload = {
-    //        data: {
-    //            message: content
-    //        }
-    //    };
-        
-    //    notificationHubService.gcm.send(null, payload, function (error) {
-    //        if (!error) {
-    //            //notification sent
-    //            console.log('sent');
-    //        }
-    //    });
-    //}
+
+///Ask how to send to specific user.
+//function sendPushNotification(content) {
+//    var payload = {
+//        data: {
+//            message: content
+//        }
+//    };
+
+//    notificationHubService.gcm.send(null, payload, function (error) {
+//        if (!error) {
+//            //notification sent
+//            console.log('sent');
+//        }
+//    });
+//}
 };

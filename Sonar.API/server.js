@@ -13,9 +13,6 @@ app.use(express.urlencoded());
 app.use(express.json());
 app.use(validator()); // this line must be immediately after express.bodyParser()!
 
-// ** validation rules ***
-require('./validation-rules.js')(validator);
-
 // ** routes ***
 require('./routes.js')(app);
 
