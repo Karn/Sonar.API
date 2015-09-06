@@ -36,7 +36,6 @@ module.exports = function (app) {
         _user.description = req.body.description;
         _user.city = req.body.city;
         _user.state = req.body.state;
-        _user.country = req.body.country;
         
         User.create(_user, function (err) {
             if (err) {
@@ -442,9 +441,30 @@ module.exports = function (app) {
         _track.description = req.body.description;
         _track.city = req.body.city;
         _track.state = req.body.state;
-        _track.country = req.body.country;
         _track.album_art = 'https://sonarapp.blob.core.windows.net/album-art-store/' + album_art_name;
         _track.source = 'https://sonarapp.blob.core.windows.net/audio-store/' + file_name;
+        
+        Track.create(_track, function (err) {
+            if (err) {
+                console.log(err);
+                res.status(500);
+                res.send({});
+            }
+            
+            res.status(201);
+            res.send({});
+        });
+    });
+    
+    app.post('/api/tracks/add', function (req, res) {
+      
+        var _track = new Track();
+        _track.id = req.query.id;
+        _track.name = req.query.name;
+        _track.description = req.query.description;
+        _track.city = req.query.city;
+        _track.state = req.query.state;
+        _track.source = 'https://sonarapp.blob.core.windows.net/audio-store/Stronger.mp3';
         
         Track.create(_track, function (err) {
             if (err) {
@@ -464,7 +484,6 @@ module.exports = function (app) {
         _track.name = req.query.name;
         _track.city = req.query.city;
         _track.state = req.query.state;
-        _track.country = req.query.country;
         _track.source = req.query.source;
         
         Track.create(_track, function (err) {
@@ -500,7 +519,7 @@ module.exports = function (app) {
     });
     
     app.get('/api/feed/new', function (req, res, next) {
-        var conditions = { city: req.query.city, state: req.query.state, country: req.query.country }; // we can use this object to supply search params ....
+        var conditions = { city: req.query.city.toLowerCase(), state: req.query.state.toLowerCase() }; // we can use this object to supply search params ....
         Track.find(conditions, function (err, tracks) {
             
             if (err) {
@@ -516,7 +535,7 @@ module.exports = function (app) {
     
     
     app.get('/api/feed/hot', function (req, res, next) {
-        var conditions = { city: req.query.city, state: req.query.state, country: req.query.country }; // we can use this object to supply search params ....
+        var conditions = { city: req.query.city.toLowerCase(), state: req.query.state.toLowerCase() }; // we can use this object to supply search params ....
         Track.find(conditions, function (err, tracks) {
             
             if (err) {
