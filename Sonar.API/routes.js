@@ -379,7 +379,8 @@ module.exports = function (app) {
         res.contentType('html');
         res.send(
             '<form action="/api/tracks/upload" method="post" enctype="multipart/form-data">' +
-    '<input type="file" name="snapshot" />' +
+    '<input type="file" name="album_art" />' +
+    '<input type="file" name="media" />' +
     '<input type="submit" value="Upload" />' +
     '</form>'
         );
@@ -387,6 +388,7 @@ module.exports = function (app) {
     
     
     app.post('/api/tracks/upload', function (req, res) {
+        var album_art_name = "";
         var file_name = "";
         
         var azure = require('azure-storage');
@@ -395,14 +397,29 @@ module.exports = function (app) {
         var accessKey = 'OQyP8P4TinFFqcKtKuFzaJqEoAxiL/ppgRd3V4MH5vP6sF81lni0aapPJ7FrxtPaSFoueHwMHdbmd+Irx1x3zg==';
         var storageAccount = 'sonarapp';
         var containerName = 'audio-store';
+        var albumContainerName = 'album-art-store';
         
         var blobService = azure.createBlobService(storageAccount, accessKey);
 
         var form = new multiparty.Form();
         
         form.on('part', function (part) {
-            if (part.filename) {
+            console.log(part);
+
+            if (part.name == 'album_art') {
+                console.log('entered album art');
+                var size = part.byteCount - part.byteOffset;
+                album_art_name = part.filename;
                 
+                blobService.createBlockBlobFromStream(albumContainerName, album_art_name, part, size, function (error) {
+                    if (error) {
+                        res.send({ error: 'Unable to upload media' });
+                    }
+                });
+            } 
+
+            if (part.name == 'media') {
+                console.log('entered media file');
                 var size = part.byteCount - part.byteOffset;
                 file_name = part.filename;
                 
@@ -411,9 +428,11 @@ module.exports = function (app) {
                         res.send({ error: 'Unable to upload media' });
                     }
                 });
-            } else {
-                form.handlePart(part);
-            }
+            } 
+            
+            //else {
+            //    form.handlePart(part);
+            //}
         });
         form.parse(req);
         
@@ -424,6 +443,7 @@ module.exports = function (app) {
         _track.city = req.body.city;
         _track.state = req.body.state;
         _track.country = req.body.country;
+        _track.album_art = 'https://sonarapp.blob.core.windows.net/album-art-store/' + album_art_name;
         _track.source = 'https://sonarapp.blob.core.windows.net/audio-store/' + file_name;
         
         Track.create(_track, function (err) {
