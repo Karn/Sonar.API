@@ -9,7 +9,6 @@ var userSchema = new mongoose.Schema({
     following: { type: Array, "default": [] },
     followers: { type: Array, "default": [] },
     track_count: { type: Number, "default": 0 },
-    starred_artists: { type: Array, "default": [] },
     liked_tracks: { type: Array, "default": [] }
 });
 

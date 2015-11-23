@@ -8,9 +8,7 @@ var app = express();
 // get the mongoose configuration/connection
 require('./data/db.js');
 
-//app.use(express.bodyParser());
-app.use(express.urlencoded());
-app.use(express.json());
+app.use(express.bodyParser());
 app.use(validator()); // this line must be immediately after express.bodyParser()!
 
 // ** routes ***

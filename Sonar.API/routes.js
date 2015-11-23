@@ -1,21 +1,32 @@
-﻿var User = require('./data/userSchema'); // import the model
-var Track = require('./data/trackSchema'); // import the model
+﻿var User = require('./data/userSchema'); // import the User model
+var Track = require('./data/trackSchema'); // import the Track model
 
 module.exports = function (app) {
     
-    app.all('/api/*', function (req, res, next) {
-        res.contentType('json');
-        next();
-    });
-    
+    /**
+     * Catch all endpoint, returns the error code 400 to indicate a 
+     * non-existent url.
+     */
     app.use(function (req, res) {
         res.status(400);
         res.send({ error: 'Bad request' });
     });
     
+    /**
+     * Sets up a defualt API endpoint and sets content type of responses to
+     * JSON.
+     */
+    app.all('/api/*', function (req, res, next) {
+        res.contentType('json');
+        next();
+    });
+    
+    /**
+     * Retrives a collection of users.
+     */
     app.get('/api/users', function (req, res) {
         
-        var conditions = {}; // we can use this object to supply search params ....
+        var conditions = {};
         User.find(conditions, function (err, users) {
             
             console.log(users.length);
@@ -29,13 +40,21 @@ module.exports = function (app) {
         });
     });
     
+    /**
+     * Creates a user and adds it to the Users table.
+     */
     app.post('/api/users', function (req, res) {
+
         var _user = new User();
         _user.id = req.body.id;
         _user.name = req.body.name;
         _user.description = req.body.description;
         _user.city = req.body.city;
         _user.state = req.body.state;
+        _user.following = [];
+        _user.followers = [];
+        _user.track_count = 0;
+        _user.liked_tracks = [];
         
         User.create(_user, function (err) {
             if (err) {
@@ -49,6 +68,11 @@ module.exports = function (app) {
         });
     });
     
+    /**
+     * Returns a specific user with the given id.
+     * 
+     * Eg. /api/users/1
+     */
     app.get('/api/users/:id', function (req, res, next) {
         
         var conditions = { id: req.params.id };
@@ -72,60 +96,76 @@ module.exports = function (app) {
 
     });
     
+    /**
+     * Returns Status Code: OK if a user is able to follow another user.
+     */
     app.get('/api/users/:id/follow/:other_id', function (req, res) {
         
-        var conditions = { id: req.params.id };
+        var current_user = {};
         
-        User.find(conditions).exec(function (err, user) {
-            
+        User.find({ id: req.params.id }).exec(function (err, user) {
             if (user == null || user == undefined) {
                 res.status(404);
                 res.send({});
             } else {
-                var j = 0;
-                if (user.following == []) {
-                    user.following.push(req.params.other_id);
-                } else {
-                    j = user.following.indexOf(req.params.other_id);
-                }
-                if (j != -1) {
-                    user.following.push(user.id);
-                    
-                    User.find({ id: req.params.other_id }).exec(function (err, other_user) {
-                        if (user === null || user === undefined) {
-                            res.status(404);
-                            res.send({});
-                        } else {
-                            var i = other_user.followers.indexOf(user.id);
-                            if (i != -1) {
-                                other_user.followers.push(user.id);
-                            }
-                        }
-                        
-                        other_user.save(function (err) {
-                            if (err) {
-                                console.log(err);
-                                res.status(500);
-                                res.send({});
-                            }
-                        });
-                    });
-                    
-                    user.save(function (err) {
-                        if (err) {
-                            console.log(err);
-                            res.status(500);
-                            res.send({});
-                        }
-                        
-                        res.status(200);
-                        res.send({});
-                    });
-                }
+                current_user = user;
             }
         });
+        
+        var other_user = {}
+        
+        User.find({ id: req.params.other_id }).exec(function (err, user) {
+            if (user == null || user == undefined) {
+                res.status(404);
+                res.send({});
+            } else {
+                other_user = user;
+            }
+        });
+        
+        addToFollowing(current_user, req.params.other_id);
+        addToFollowers(other_user, req.params.id);
+        
+        current_user.save(function (e1) {
+            if (e1) {
+                console.log(e1);
+                res.status(500);
+                res.send({});
+            }
+        });
+        
+        other_user.save(function (e2) {
+            if (e2) {
+                console.log(e2);
+                res.status(500);
+                res.send({});
+            }
+        });
+        
+        res.status(200);
+        res.send({});
     });
     
+    function addToFollowers(user, id) {
+        if (user.followers == undefined) {
+            user.followers = [id];
+        } else if (!contains(user.followers, id)) {
+            user.followers.push(id);
+        }
+    }
+    
+    function addToFollowing(user, id) {
+        if (user.following == undefined) {
+            user.following = [id];
+        } else if (!contains(user.following, id)) {
+            user.following.push(id);
+        }
+    }
+    
+    /**
+     * Returns Status Code: OK if a user has successfully followed another
+     * user.
+     */
     app.get('/api/users/:id/unfollow/:other_id', function (req, res) {
         
         var conditions = { id: req.params.id };
@@ -140,7 +180,9 @@ module.exports = function (app) {
                 if (j != -1) {
                     user.following.splice(j, 1);
                     
-                    User.find({ id: req.params.other_id }).exec(function (err, other_user) {
+                    User.find({ id: req.params.other_id }).exec(
+                        function (err, other_user) {
+
                         if (user === null || user === undefined) {
                             res.status(404);
                             res.send({});
@@ -175,64 +217,9 @@ module.exports = function (app) {
         });
     });
     
-    app.put('/api/users/:id/star/:other_id', function (req, res) {
-        
-        var conditions = { id: req.params.id };
-        
-        User.find(conditions).exec(function (err, user) {
-            
-            if (user === null || user === undefined) {
-                res.status(404);
-                res.send({});
-            } else {
-                var j = user.starred_artists.indexOf(req.params.other_id);
-                if (j != -1) {
-                    user.starred_artists.push(user.id);
-                    
-                    user.save(function (err) {
-                        if (err) {
-                            console.log(err);
-                            res.status(500);
-                            res.send({});
-                        }
-                        
-                        res.status(200);
-                        res.send({});
-                    });
-                }
-            }
-        });
-    });
-    
-    app.put('/api/users/:id/unstar/:other_id', function (req, res) {
-        
-        var conditions = { id: req.params.id };
-        
-        User.find(conditions).exec(function (err, user) {
-            
-            if (user === null || user === undefined) {
-                res.status(404);
-                res.send({});
-            } else {
-                var j = user.starred_artists.indexOf(req.params.other_id);
-                if (j != -1) {
-                    user.starred_artists.splice(j, 1);
-                    
-                    user.save(function (err) {
-                        if (err) {
-                            console.log(err);
-                            res.status(500);
-                            res.send({});
-                        }
-                        
-                        res.status(200);
-                        res.send({});
-                    });
-                }
-            }
-        });
-    });
-    
+    /**
+     * Allows a user to like a track.
+     */
     app.put('/api/users/:id/like', function (req, res) {
         
         var conditions = { id: req.params.id };
@@ -291,6 +278,9 @@ module.exports = function (app) {
         });
     });
     
+    /**
+     * Returns a collection of users that are being followed.
+     */
     app.get('/api/users/:id/following', function (req, res) {
         
         var conditions = { id: req.params.id };
@@ -306,6 +296,9 @@ module.exports = function (app) {
         });
     });
     
+    /**
+     * Returns a collection of users that are following a given blog.
+     */
     app.get('/api/users/:id/followers', function (req, res) {
         
         var conditions = { id: req.params.id };
@@ -321,6 +314,9 @@ module.exports = function (app) {
         });
     });
     
+    /**
+     * Returns a collection of users which have been  'starred' by the user.
+     */
     app.get('/api/users/:id/starred_artists', function (req, res) {
         
         var conditions = { id: req.params.id };
@@ -336,6 +332,9 @@ module.exports = function (app) {
         });
     });
     
+    /**
+     * Return a collection of tracks which have been liked by a given user.
+     */
     app.get('/api/users/:id/liked_tracks', function (req, res) {
         
         var conditions = { id: req.params.id };
@@ -363,8 +362,8 @@ module.exports = function (app) {
                 res.send({});
             }
             
-            console.log(tracks);
             if (tracks != null && tracks != []) {
+                                
                 res.send(tracks);
             } else {
                 res.status(404);
@@ -373,67 +372,10 @@ module.exports = function (app) {
         });
     });
     
-    //upload a file to azure blob storage
-    app.get('/api/tracks/upload', function (req, res) {
-        res.contentType('html');
-        res.send(
-            '<form action="/api/tracks/upload" method="post" enctype="multipart/form-data">' +
-    '<input type="file" name="album_art" />' +
-    '<input type="file" name="media" />' +
-    '<input type="submit" value="Upload" />' +
-    '</form>'
-        );
-    });
-    
-    
-    app.post('/api/tracks/upload', function (req, res) {
-        var album_art_name = "";
-        var file_name = "";
-        
-        var azure = require('azure-storage');
-        var multiparty = require('multiparty');
-        
-        var accessKey = 'OQyP8P4TinFFqcKtKuFzaJqEoAxiL/ppgRd3V4MH5vP6sF81lni0aapPJ7FrxtPaSFoueHwMHdbmd+Irx1x3zg==';
-        var storageAccount = 'sonarapp';
-        var containerName = 'audio-store';
-        var albumContainerName = 'album-art-store';
-        
-        var blobService = azure.createBlobService(storageAccount, accessKey);
-
-        var form = new multiparty.Form();
-        
-        form.on('part', function (part) {
-            console.log(part);
-
-            if (part.name == 'album_art') {
-                console.log('entered album art');
-                var size = part.byteCount - part.byteOffset;
-                album_art_name = part.filename;
-                
-                blobService.createBlockBlobFromStream(albumContainerName, album_art_name, part, size, function (error) {
-                    if (error) {
-                        res.send({ error: 'Unable to upload media' });
-                    }
-                });
-            } 
-
-            if (part.name == 'media') {
-                console.log('entered media file');
-                var size = part.byteCount - part.byteOffset;
-                file_name = part.filename;
-                
-                blobService.createBlockBlobFromStream(containerName, file_name, part, size, function (error) {
-                    if (error) {
-                        res.send({ error: 'Unable to upload media' });
-                    }
-                });
-            } 
-            
-            //else {
-            //    form.handlePart(part);
-            //}
-        });
-        form.parse(req);
+    /**
+     * Create a track item.
+     */
+    app.post('/api/tracks/create', function (req, res) {
         
         var _track = new Track();
         _track.id = req.body.id;
@@ -441,8 +383,7 @@ module.exports = function (app) {
         _track.description = req.body.description;
         _track.city = req.body.city;
         _track.state = req.body.state;
-        _track.album_art = 'https://sonarapp.blob.core.windows.net/album-art-store/' + album_art_name;
-        _track.source = 'https://sonarapp.blob.core.windows.net/audio-store/' + file_name;
+        _track.source = req.body.source;
         
         Track.create(_track, function (err) {
             if (err) {
@@ -456,48 +397,10 @@ module.exports = function (app) {
         });
     });
     
-    app.get('/api/tracks/add', function (req, res) {
-      
-        var _track = new Track();
-        _track.id = req.query.id;
-        _track.name = req.query.name;
-        _track.description = req.query.description;
-        _track.city = req.query.city;
-        _track.state = req.query.state;
-        _track.source = 'https://sonarapp.blob.core.windows.net/audio-store/Stronger.mp3';
-        
-        Track.create(_track, function (err) {
-            if (err) {
-                console.log(err);
-                res.status(500);
-                res.send({});
-            }
-            
-            res.status(201);
-            res.send({});
-        });
-    });
     
-    app.get('/api/track/add', function (req, res) {
-        var _track = new Track();
-        _track.id = req.query.id;
-        _track.name = req.query.name;
-        _track.city = req.query.city;
-        _track.state = req.query.state;
-        _track.source = req.query.source;
-        
-        Track.create(_track, function (err) {
-            if (err) {
-                console.log(err);
-                res.satus(500);
-                res.send({ error: 'Internal server error' });
-            }
-            
-            res.status(201);
-            res.send({});
-        });
-    });
-    
+    /**
+     * Return a particular track.
+     */
     app.get('/api/tracks/:id', function (req, res, next) {
         
         var conditions = { id: req.params.id };
@@ -518,8 +421,16 @@ module.exports = function (app) {
         });
     });
     
+    
+    /**
+     * Returns a collection of the latest uploaded tracks.
+     */
     app.get('/api/feed/new', function (req, res, next) {
-        var conditions = { city: req.query.city.toLowerCase(), state: req.query.state.toLowerCase() }; // we can use this object to supply search params ....
+        var conditions = {
+            city: req.query.city.toLowerCase(), 
+            state: req.query.state.toLowerCase()
+        };
+
         Track.find(conditions, function (err, tracks) {
             
             if (err) {
@@ -533,9 +444,14 @@ module.exports = function (app) {
         });
     });
     
-    
+    /**
+     * Returns a collection of tracks that have the most amount of likes.
+     */
     app.get('/api/feed/hot', function (req, res, next) {
-        var conditions = { city: req.query.city.toLowerCase(), state: req.query.state.toLowerCase() }; // we can use this object to supply search params ....
+        var conditions = {
+            city: req.query.city.toLowerCase(), 
+            state: req.query.state.toLowerCase()
+        };
         Track.find(conditions, function (err, tracks) {
             
             if (err) {
@@ -548,6 +464,52 @@ module.exports = function (app) {
         });
     });
     
+    /**
+     * Returns a collection of tracks that have been uploaded by users being 
+     * followed by the given user.
+     */
+    app.get('/api/users/:id/following_tracks', function (req, res, next) {
+        
+        var following_tracks = [];
+        
+        var followed_users = {};
+        
+        User.find({ id: req.params.id }, function (err, user) {
+            if (err) {
+                console.log(err);
+                res.status(500);
+                res.send({});
+            } else {
+                console.log(user.following)
+                if (user.following != undefined) {
+                    for (var i = 0; i < user.following.length; i++) {
+                        Track.findOne({ id: followed_users[i].id },
+                            function (err, tracks) {
+                            
+                            if (err) {
+                                console.log(err);
+                                res.status(500);
+                                res.send({});
+                            }
+                            
+                            if (tracks != null && tracks != []) {
+                                following_tracks.push(tracks);
+                            } else {
+                                res.status(404);
+                                res.send({});
+                            }
+                        });
+                    }
+                }
+            }
+        });
+        
+        res.send(following_tracks);
+    });
+    
+    /**
+     * Performs a search operation to locate a user or track.
+     */
     app.get('/api/search', function (req, res, next) {
         var conditions = { name: { $regex : req.query.tag } };
         
@@ -576,26 +538,27 @@ module.exports = function (app) {
         }
     });
     
+    /**
+     * Basic comparator. Sorts a collection of objects by a given key.
+     */
     function sortByKey(array, key) {
         return array.sort(function (a, b) {
             var x = a[key]; var y = b[key];
             return ((x > y) ? -1 : ((x < y) ? 1 : 0));
         });
     }
-
-///Ask how to send to specific user.
-//function sendPushNotification(content) {
-//    var payload = {
-//        data: {
-//            message: content
-//        }
-//    };
-
-//    notificationHubService.gcm.send(null, payload, function (error) {
-//        if (!error) {
-//            //notification sent
-//            console.log('sent');
-//        }
-//    });
-//}
+    
+    /**
+     * Check if a collection of objects contains a given object.
+     */
+    function contains(array, obj) {
+        if (array != undefined) {
+            for (var i = 0; i < array.length; i++) {
+                if (array[i] === obj) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
 };

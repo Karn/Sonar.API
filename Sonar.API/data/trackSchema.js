@@ -9,7 +9,7 @@ var trackSchema = new mongoose.Schema({
     description: { type: String },
     city: { type: String, required: true },
     state: { type: String, required: true },
-    source: { type: String},
+    source: { type: String },
     uploaded: { type: Date, "default": Date.now }
 });
 
