@@ -24,7 +24,7 @@ module.exports = function (app) {
     /**
      * Retrives a collection of users.
      */
-    app.get('/api/users', function (req, res) {
+    app.get('/api/users', function (req, res) { 
         
         var conditions = {};
         User.find(conditions, function (err, users) {
@@ -249,6 +249,9 @@ module.exports = function (app) {
         });
     });
     
+    /**
+     * Allows a user to unlike a track.
+     */
     app.put('/api/users/:id/unlike', function (req, res) {
         
         var conditions = { id: req.params.id };
@@ -350,6 +353,9 @@ module.exports = function (app) {
         });
     });
     
+    /**
+     * Return a collection of tracks uploaded by a given user.
+     */
     app.get('/api/users/:id/tracks', function (req, res, next) {
         
         var conditions = { id: req.params.id };
